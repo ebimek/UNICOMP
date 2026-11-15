@@ -1,0 +1,1483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Junior Astronaut Trainer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one dark "mission control" page. Hub of training stations, each station opens in place. Mars orange is the single accent. */
+:root{
+  --bg:#0B1020; --panel:#131A33; --panel-2:#1A2342; --line:#2B3664;
+  --fg:#EAF0FF; --muted:#A3AFD6;
+  --accent:#FF8A4C; --accent-ink:#1A0D06;
+  --good:#6EE7D5; --bad:#FF8484;
+  --display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0}
+body{
+  background:var(--bg); color:var(--fg);
+  font:16px/1.5 var(--body);
+  padding-block:24px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:clamp(1.9rem,5vw,2.8rem);font-weight:700}
+h2{font-size:1.6rem;font-weight:700}
+h3{font-size:1.15rem;font-weight:700}
+p{margin:0}
+.eyebrow{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:6px}
+.muted{color:var(--muted)}
+:focus-visible{outline:3px solid var(--good);outline-offset:3px;border-radius:6px}
+[tabindex="-1"]:focus{outline:none}
+
+.top{display:flex;flex-wrap:wrap;gap:20px 32px;justify-content:space-between;align-items:flex-end}
+.rank{display:flex;flex-direction:column;gap:6px;min-width:220px;flex:0 1 280px}
+.rank-line{display:flex;justify-content:space-between;gap:12px;font-family:var(--display);font-weight:700}
+.rank-line span:last-child{color:var(--muted);font-weight:500;font-size:.9rem;font-family:var(--body);font-variant-numeric:tabular-nums}
+.bar{height:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.bar > span{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .4s}
+.rank small{color:var(--muted)}
+
+.intro{max-width:60ch;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card.live{border-color:#4a5a9c}
+.card .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
+.card p.desc{color:var(--muted);flex:1}
+.tag{display:inline-block;padding:2px 10px;border:1px solid var(--line);border-radius:99px;font-size:.78rem;color:var(--muted);white-space:nowrap}
+.tag.done{border-color:var(--good);color:var(--good)}
+.card.locked{background:transparent;border-style:dashed}
+
+.btn{
+  font:600 1rem var(--body);min-height:44px;padding:10px 20px;border-radius:10px;border:2px solid transparent;
+  cursor:pointer;background:var(--accent);color:var(--accent-ink);text-align:center;
+}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--fg);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--muted)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+
+.badges{display:flex;flex-wrap:wrap;gap:12px}
+.badge{display:flex;align-items:center;gap:10px;padding:10px 16px;border:1px solid var(--line);border-radius:12px;color:var(--muted);background:var(--panel)}
+.badge svg{flex:none}
+.badge.earned{color:var(--fg);border-color:var(--good)}
+.badge.earned svg{color:var(--good)}
+
+.back{align-self:flex-start}
+.station-head{display:flex;flex-direction:column;gap:6px}
+
+/* Lander */
+.lander{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.stage{flex:0 1 400px;min-width:0;width:100%;max-width:400px;display:flex;flex-direction:column;gap:12px}
+canvas{display:block;width:100%;height:auto;aspect-ratio:2/3;border:1px solid var(--line);border-radius:14px;background:#090D1F}
+.pad-controls{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:10px}
+.pad-controls button{min-height:60px;touch-action:none;user-select:none;-webkit-user-select:none;font-size:1.05rem}
+.side{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:16px}
+dl.tele{display:grid;grid-template-columns:1fr auto;gap:8px 16px;margin:0;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+dl.tele dt{color:var(--muted)}
+dl.tele dd{margin:0;font-family:var(--display);font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.state{font-family:var(--body);font-weight:600;font-size:.85rem;margin-left:8px}
+.state.ok{color:var(--good)} .state.warn{color:var(--accent)}
+.fuel{grid-column:1 / -1}
+.fuel .bar > span{background:var(--good);width:100%}
+.rules{padding:16px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);font-size:.95rem}
+.rules ul{margin:8px 0 0;padding-left:20px}
+.result{padding:16px;border-radius:14px;border:1px solid var(--line);background:var(--panel-2);display:flex;flex-direction:column;gap:12px}
+.result.win{border-color:var(--good)}
+.result.lose{border-color:var(--bad)}
+.result strong{font-family:var(--display);font-size:1.25rem}
+.result-actions{display:flex;flex-wrap:wrap;gap:10px}
+kbd{font:600 .8rem var(--body);padding:1px 7px;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;color:var(--fg)}
+
+/* Outpost */
+.site-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.item{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.item .info{flex:1 1 260px;min-width:0}
+.item .sub{display:block;color:var(--muted);font-size:.9rem}
+.item .cost{display:block;color:var(--muted);font-size:.85rem;margin-top:2px}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper button{min-width:44px;min-height:44px;padding:0;font-size:1.2rem}
+.stepper output{min-width:2.2ch;text-align:center;font-family:var(--display);font-weight:700;font-variant-numeric:tabular-nums}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.checks li{display:flex;gap:10px;align-items:flex-start;font-size:.95rem}
+.chip{flex:none;font:600 .75rem var(--body);padding:2px 8px;border-radius:99px;border:1px solid var(--line);margin-top:2px}
+.chip.ok{color:var(--good);border-color:var(--good)}
+.chip.warn{color:var(--accent);border-color:var(--accent)}
+.op-grid{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.op-grid > .panel{flex:1 1 300px}
+.stat{display:flex;flex-direction:column;gap:4px}
+.stat .row{display:flex;justify-content:space-between;gap:12px}
+.stat .row span:last-child{font-family:var(--display);font-weight:700;font-variant-numeric:tabular-nums}
+.stat .hint{color:var(--muted);font-size:.85rem}
+.stat .bar > span{background:var(--good)}
+.stat .bar.low > span{background:var(--bad)}
+fieldset{border:1px solid var(--line);border-radius:12px;padding:8px 14px 10px;margin:0;min-width:0}
+legend{font-family:var(--display);font-weight:700;padding:0 6px}
+.choice{display:flex;gap:10px;align-items:flex-start;padding:8px 0;cursor:pointer}
+.choice input{margin-top:4px;width:20px;height:20px;accent-color:var(--accent);flex:none}
+.choice .sub{display:block;color:var(--muted);font-size:.9rem}
+fieldset:disabled .choice{opacity:.5;cursor:default}
+.fb p + p{margin-top:8px}
+ul.report{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+details{border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--muted)}
+summary{cursor:pointer;color:var(--fg);font-weight:600}
+
+.tip{padding:12px 14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
+.tip strong{color:var(--fg)}
+details.more{padding:12px 14px}
+
+/* Orbit */
+input[type=range]{width:100%;min-height:44px;accent-color:var(--accent);margin:4px 0}
+.missions{display:flex;flex-direction:column;gap:10px}
+.opt.sel{border-color:var(--accent);background:var(--panel-2)}
+.opt .sub{display:block;font-weight:400;font-size:.9rem;color:var(--muted);margin-top:2px}
+.opt .mark.done{color:var(--good)}
+.slider-box{padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.slider-box label{font-family:var(--display);font-weight:700;display:block}
+
+/* Photos */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chips .btn{min-height:40px;padding:6px 16px;font-size:.95rem}
+.chips .btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.photo{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.photo img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--panel-2)}
+.photo figcaption{padding:10px 12px;font-size:.85rem;color:var(--muted)}
+
+/* Quiz */
+.quiz{max-width:680px;display:flex;flex-direction:column;gap:18px}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-variant-numeric:tabular-nums}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{
+  font:500 1rem var(--body);text-align:left;min-height:48px;padding:12px 16px;border-radius:10px;
+  background:var(--panel);color:var(--fg);border:2px solid var(--line);cursor:pointer;
+}
+.opt:hover:not([disabled]){border-color:var(--muted)}
+.opt[disabled]{cursor:default}
+.opt.right{border-color:var(--good)}
+.opt.wrong{border-color:var(--bad)}
+.opt .mark{font-weight:600;margin-left:8px}
+.opt.right .mark{color:var(--good)} .opt.wrong .mark{color:var(--bad)}
+.fb{padding:14px 16px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line)}
+.score{font-family:var(--display);font-size:3rem;font-weight:700}
+
+footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:16px}
+@media (prefers-reduced-motion:reduce){.bar > span{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Cadet training program</p>
+      <h1>Junior Astronaut Trainer</h1>
+    </div>
+    <div class="rank">
+      <div class="rank-line"><span id="rankName">Cadet</span><span id="xpText">0 / 320 XP</span></div>
+      <div class="bar" id="xpBar" role="progressbar" aria-label="Experience points" aria-valuemin="0" aria-valuemax="320" aria-valuenow="0"><span id="xpFill"></span></div>
+      <small id="nextRank">100 XP to Pilot</small>
+    </div>
+  </header>
+
+  <!-- HUB -->
+  <main id="view-hub" class="wrap" style="gap:24px">
+    <h2 tabindex="-1" id="hubTitle">Your missions</h2>
+    <p class="intro">Run a Moon or Mars outpost and make the hard choices real space engineers make. Power for the shelter, cargo for the shield, time for science: every choice has a cost. Finish missions to earn XP and rank up from Cadet to Commander.</p>
+
+    <div class="grid">
+      <article class="card live" style="grid-column:1 / -1">
+        <div class="meta"><span>Main mission</span><span class="tag" id="outTag">+60 XP</span></div>
+        <h3>Outpost Commander</h3>
+        <p class="desc">Pack limited cargo, then keep four astronauts safe for 12 weeks. Balance power, air and water, food, and radiation shielding while real solar flares, dust storms, and broken equipment test your plan.</p>
+        <button class="btn" id="goOutpost">Plan the outpost</button>
+      </article>
+    </div>
+
+    <details class="more">
+      <summary>More training stations</summary>
+      <div class="grid" style="margin-top:14px">
+        <article class="card live">
+          <div class="meta"><span>Station 1</span><span class="tag" id="landTag">+100 XP</span></div>
+          <h3>Mars Landing</h3>
+          <p class="desc">Fly a lander down to the surface using Mars's real gravity. Fire the engine to slow down, tilt to line up with the landing pad, and touch down gently.</p>
+          <button class="btn" id="goLander">Start landing</button>
+        </article>
+        <article class="card live">
+          <div class="meta"><span>Station 2</span><span class="tag" id="quizTag">Up to +100 XP</span></div>
+          <h3>Mission Control Quiz</h3>
+          <p class="desc">Five questions about Mars and life in orbit. Each correct answer is worth 20 XP.</p>
+          <button class="btn" id="goQuiz">Start quiz</button>
+        </article>
+        <article class="card live">
+          <div class="meta"><span>Station 3</span><span class="tag" id="orbitTag">Up to +60 XP</span></div>
+          <h3>Orbit Builder</h3>
+          <p class="desc">Choose how high to place a satellite for three real missions. See how height changes its speed and how long each lap around Earth takes.</p>
+          <button class="btn" id="goOrbit">Start building</button>
+        </article>
+      </div>
+    </details>
+
+    <div>
+      <h3 style="margin-bottom:12px">Badges</h3>
+      <div class="badges">
+        <div class="badge" id="badgeOutpost">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20a7 7 0 0 1 14 0"/><path d="M12 13V8M10 8h4"/></svg>
+          <span>Outpost Commander<br><small id="badgeOutpostText">Survive 12 weeks</small></span>
+        </div>
+        <div class="badge" id="badgeLand">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l4 8H8z"/><path d="M8 11l-3 6M16 11l3 6M4 21h16"/></svg>
+          <span>Mars Lander<br><small id="badgeLandText">Land safely on the pad</small></span>
+        </div>
+        <div class="badge" id="badgeQuiz">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span>Mission Control<br><small id="badgeQuizText">Score 4 or more</small></span>
+        </div>
+        <div class="badge" id="badgeOrbit">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-25 12 12)"/></svg>
+          <span>Orbit Master<br><small id="badgeOrbitText">Finish all 3 orbits</small></span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom:12px">Mission photos</h3>
+      <div class="chips" role="group" aria-label="Photo topic">
+        <button class="btn ghost" type="button" data-q="Mars rover" aria-pressed="true">Mars rovers</button>
+        <button class="btn ghost" type="button" data-q="Moon surface" aria-pressed="false">Moon surface</button>
+        <button class="btn ghost" type="button" data-q="solar flare Sun" aria-pressed="false">The Sun</button>
+      </div>
+      <p class="muted" id="galleryMsg" aria-live="polite" style="margin-bottom:10px"></p>
+      <div class="gallery" id="gallery"></div>
+      <p class="muted" style="font-size:.85rem;margin-top:12px">Photos come from the NASA Image and Video Library (images.nasa.gov). Check NASA's media usage guidelines before reusing any image.</p>
+    </div>
+  </main>
+
+  <!-- LANDER -->
+  <section id="view-lander" hidden>
+    <button class="btn ghost back" data-back>&larr; Back to stations</button>
+    <div class="station-head" style="margin:20px 0">
+      <p class="eyebrow">Station 1</p>
+      <h2 tabindex="-1" id="landerTitle">Mars Landing</h2>
+      <p class="muted" style="max-width:60ch">Mars pulls with 3.71 m/s&sup2;, about 38% of Earth's gravity. You fall slower than at home, but you still need the engine to land softly.</p>
+    </div>
+    <div class="lander">
+      <div class="stage">
+        <canvas id="cv" aria-label="Lander game view. Use the controls to steer and fire the engine."></canvas>
+        <div class="pad-controls" id="touchPad">
+          <button class="btn ghost" data-key="left" aria-label="Tilt left">&larr; Left</button>
+          <button class="btn" data-key="thrust" aria-label="Fire engine">Engine</button>
+          <button class="btn ghost" data-key="right" aria-label="Tilt right">Right &rarr;</button>
+        </div>
+        <p class="muted" style="font-size:.9rem">Keyboard: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to tilt, <kbd>&uarr;</kbd> or <kbd>Space</kbd> for the engine. You can also use <kbd>A</kbd> <kbd>D</kbd> <kbd>W</kbd>.</p>
+      </div>
+      <div class="side">
+        <dl class="tele" aria-label="Telemetry">
+          <dt>Height</dt><dd><span id="tAlt">180</span> m</dd>
+          <dt>Falling speed</dt><dd><span id="tVy">0.0</span> m/s<span class="state" id="vyState"></span></dd>
+          <dt>Sideways speed</dt><dd><span id="tVx">0.0</span> m/s</dd>
+          <dt>Tilt</dt><dd><span id="tAng">0</span>&deg;</dd>
+          <div class="fuel">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="muted">Fuel</span><span id="fuelTxt" style="font-family:var(--display);font-weight:700">100%</span></div>
+            <div class="bar"><span id="fuelBar"></span></div>
+          </div>
+        </dl>
+        <div class="rules">
+          <strong style="color:var(--fg)">Land safely by touching down with:</strong>
+          <ul>
+            <li>Falling speed of 3 m/s or less</li>
+            <li>Sideways speed of 2 m/s or less</li>
+            <li>Tilt of 10&deg; or less</li>
+            <li>Both feet on the teal pad</li>
+          </ul>
+        </div>
+        <div class="result" id="result" aria-live="polite">
+          <strong id="resultTitle">Ready for launch?</strong>
+          <p class="muted" id="resultText">Press start, then hold the engine to slow your fall.</p>
+          <div class="result-actions">
+            <button class="btn" id="goBtn">Start landing</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OUTPOST -->
+  <section id="view-outpost" hidden>
+    <button class="btn ghost back" data-back>&larr; Back to missions</button>
+    <div class="station-head" style="margin:20px 0">
+      <p class="eyebrow">Main mission</p>
+      <h2 tabindex="-1" id="outpostTitle">Outpost Commander</h2>
+      <p class="muted" style="max-width:62ch">You are in charge of an outpost with four astronauts. The rocket can only carry so much cargo, so every choice has a cost. Keep the crew safe for 12 weeks.</p>
+    </div>
+
+    <div id="opDesign" class="wrap" style="gap:24px">
+      <div>
+        <h3 style="margin-bottom:10px">1. Choose your site</h3>
+        <div class="site-pick" id="opSites" role="group" aria-label="Choose a site"></div>
+        <p class="muted" id="opWeather" style="margin-top:10px" aria-live="polite"></p>
+      </div>
+      <div class="op-grid">
+        <div style="flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:12px">
+          <h3>2. Pack your cargo</h3>
+          <div class="panel">
+            <div class="stat">
+              <div class="row"><span>Cargo used</span><span id="opBudgetTxt">0 of 120 units</span></div>
+              <div class="bar" id="opBudgetBar"><span id="opBudgetFill"></span></div>
+            </div>
+          </div>
+          <div id="opItems" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+        <div style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:12px">
+          <h3>3. Check your plan</h3>
+          <div class="panel">
+            <ul class="checks" id="opChecks" aria-live="polite"></ul>
+            <button class="btn" id="opStart">Launch mission</button>
+          </div>
+          <details>
+            <summary>Words to know</summary>
+            <ul class="report" style="margin-top:10px">
+              <li><strong>PU (power units):</strong> how this game counts electricity.</li>
+              <li><strong>Radiation dose (mSv):</strong> how much space radiation a person's body has absorbed. Too much can harm health.</li>
+              <li><strong>Solar flare:</strong> a burst of energy from the Sun that can send out harmful radiation.</li>
+              <li><strong>Regolith:</strong> loose rock and dust on the Moon or Mars. Piled on a base, it works like a shield.</li>
+              <li><strong>Recycler:</strong> a machine that cleans used air and water so the crew can use them again.</li>
+              <li><strong>Fission reactor:</strong> a small nuclear power plant that works day and night.</li>
+            </ul>
+          </details>
+          <details>
+            <summary>Which numbers are real?</summary>
+            <p style="margin-top:10px">Solar storms come from real solar flares recorded in NASA's space weather database (DONKI). Everyday radiation follows real measurements: about 1.4 mSv a day on the Moon (Chang'e-4 lander) and about 0.65 on Mars (Curiosity rover), compared with about 0.5 on the International Space Station. Crew needs are close to real: about 0.84 kg of oxygen and 0.6 kg of food per person each day, and space stations recycle most of their water.</p>
+            <p style="margin-top:10px">The game scales some numbers so a mission fits in 12 weeks: power units, cargo units, the 120 mSv mission limit (NASA's career limit is 600 mSv), and how big each storm is.</p>
+            <p class="muted" id="radlabNote" style="margin-top:10px" hidden></p>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div id="opPlay" hidden>
+      <div class="op-grid">
+        <div class="panel" id="opStatus" aria-label="Outpost status"></div>
+        <div style="flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:16px">
+          <div class="panel">
+            <h3 id="opWeekTitle" tabindex="-1">Week 1 of 12</h3>
+            <div class="result" id="opForecast"></div>
+            <div id="opControls" style="display:flex;flex-direction:column;gap:14px">
+              <div id="opDecision"></div>
+              <div id="opFocus"></div>
+              <div><strong>If you do this</strong><ul class="report" id="opPreview"></ul></div>
+              <button class="btn" id="opRun">Run this week</button>
+            </div>
+          </div>
+          <div class="panel" id="opReportBox" hidden aria-live="polite">
+            <h3 id="opReportTitle" tabindex="-1">What happened</h3>
+            <ul class="report" id="opReport"></ul>
+            <p class="tip" id="opTip" hidden></p>
+            <button class="btn" id="opNext">Next week</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="opEnd" hidden>
+      <div class="panel" style="max-width:680px" id="opEndBody"></div>
+    </div>
+  </section>
+
+  <!-- ORBIT -->
+  <section id="view-orbit" hidden>
+    <button class="btn ghost back" data-back>&larr; Back to stations</button>
+    <div class="station-head" style="margin:20px 0">
+      <p class="eyebrow">Station 3</p>
+      <h2 tabindex="-1" id="orbitTitle">Orbit Builder</h2>
+      <p class="muted" style="max-width:60ch">A satellite stays up because it moves sideways fast enough to keep missing the Earth. The higher the orbit, the slower it moves and the longer each lap takes. Pick a mission, set the height, then check your orbit.</p>
+    </div>
+    <div class="lander">
+      <div class="stage">
+        <canvas id="cv2" style="aspect-ratio:1/1" aria-label="Earth with a satellite circling it. The teal band shows the target height for the chosen mission. The orange dot on Earth is a ground station."></canvas>
+        <p class="muted" style="font-size:.9rem">Heights are not drawn to scale. Time is sped up 1,200 times, so one second on screen is 20 minutes in space. The orange dot is a ground station turning with Earth.</p>
+      </div>
+      <div class="side">
+        <div class="missions" id="missionList" role="group" aria-label="Choose a mission"></div>
+        <div class="slider-box">
+          <label for="alt">Height above Earth</label>
+          <input type="range" id="alt" min="0" max="100" step="0.5" value="50">
+          <div style="display:flex;justify-content:space-between;color:var(--muted);font-size:.85rem"><span>Low</span><span>High</span></div>
+        </div>
+        <dl class="tele" aria-label="Orbit readout">
+          <dt>Height</dt><dd><span id="oAlt">0</span> km</dd>
+          <dt>Speed</dt><dd><span id="oSpd">0</span> km/s</dd>
+          <dt>One lap takes</dt><dd id="oLap">0</dd>
+          <dt>Target zone</dt><dd><span class="state" id="oZone" style="margin-left:0"></span></dd>
+        </dl>
+        <div class="result" id="oResult" aria-live="polite">
+          <strong id="oTitle">Ready to build</strong>
+          <p class="muted" id="oText">Pick a mission, set the height, then check your orbit.</p>
+          <div class="result-actions"><button class="btn" id="oCheck">Check orbit</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="view-quiz" hidden>
+    <button class="btn ghost back" data-back>&larr; Back to stations</button>
+    <div class="quiz" style="margin-top:20px">
+      <div class="station-head">
+        <p class="eyebrow">Station 2</p>
+        <h2 tabindex="-1" id="quizTitle">Mission Control Quiz</h2>
+      </div>
+      <div id="quizBody" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <footer>Data used: NASA DONKI (solar flares), NASA RadLab (space station radiation), and the NASA Image and Video Library (photos in the hosted version). Radiation levels on the Moon and Mars come from published instrument measurements (Chang’e-4 lander and Curiosity rover). Numbers are scaled so the game is playable in a short mission. This project is not endorsed by NASA.</footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s); };
+
+  /* ---------- progress (localStorage is optional) ---------- */
+  var store = {
+    get: function(k, d){ try { var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+    set: function(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+  };
+  var progress = store.get('jat-progress', null);
+  if (!progress || typeof progress !== 'object') progress = {};
+  progress = {
+    landed: progress.landed === true,
+    quizBest: Math.max(0, Math.min(5, Number(progress.quizBest) || 0)),
+    orbit: [0, 1, 2].map(function(i){ return Array.isArray(progress.orbit) && progress.orbit[i] === true; }),
+    outpost: progress.outpost === true
+  };
+  function save(){ store.set('jat-progress', progress); }
+
+  var RANKS = [{n:'Cadet', min:0}, {n:'Pilot', min:100}, {n:'Commander', min:200}];
+  var MAX_XP = 320;
+  function orbitCount(){ return progress.orbit.filter(Boolean).length; }
+  function xp(){ return (progress.landed ? 100 : 0) + progress.quizBest * 20 + orbitCount() * 20 + (progress.outpost ? 60 : 0); }
+
+  function refreshHub(){
+    var x = xp(), rank = RANKS[0], next = null, i;
+    for (i = 0; i < RANKS.length; i++){ if (x >= RANKS[i].min) rank = RANKS[i]; }
+    for (i = 0; i < RANKS.length; i++){ if (RANKS[i].min > x){ next = RANKS[i]; break; } }
+    $('#rankName').textContent = rank.n;
+    $('#xpText').textContent = x + ' / ' + MAX_XP + ' XP';
+    $('#xpFill').style.width = (x / MAX_XP * 100) + '%';
+    $('#xpBar').setAttribute('aria-valuenow', String(x));
+    $('#nextRank').textContent = next ? (next.min - x) + ' XP to ' + next.n : 'Top rank reached';
+    var lt = $('#landTag'); lt.textContent = progress.landed ? 'Completed' : '+100 XP'; lt.classList.toggle('done', progress.landed);
+    var qt = $('#quizTag'); qt.textContent = progress.quizBest > 0 ? 'Best ' + progress.quizBest + ' / 5' : 'Up to +100 XP'; qt.classList.toggle('done', progress.quizBest >= 4);
+    $('#badgeLand').classList.toggle('earned', progress.landed);
+    $('#badgeLandText').textContent = progress.landed ? 'Earned' : 'Land safely on the pad';
+    $('#badgeQuiz').classList.toggle('earned', progress.quizBest >= 4);
+    $('#badgeQuizText').textContent = progress.quizBest >= 4 ? 'Earned' : 'Score 4 or more';
+    var oc = orbitCount();
+    var ot = $('#orbitTag'); ot.textContent = oc > 0 ? oc + ' / 3 done' : 'Up to +60 XP'; ot.classList.toggle('done', oc === 3);
+    $('#badgeOrbit').classList.toggle('earned', oc === 3);
+    $('#badgeOrbitText').textContent = oc === 3 ? 'Earned' : 'Finish all 3 orbits';
+    var ou = $('#outTag'); ou.textContent = progress.outpost ? 'Completed' : '+60 XP'; ou.classList.toggle('done', progress.outpost);
+    $('#badgeOutpost').classList.toggle('earned', progress.outpost);
+    $('#badgeOutpostText').textContent = progress.outpost ? 'Earned' : 'Survive 12 weeks';
+  }
+
+  /* ---------- views ---------- */
+  var view = 'hub';
+  var titles = { hub:'#hubTitle', lander:'#landerTitle', orbit:'#orbitTitle', outpost:'#outpostTitle', quiz:'#quizTitle' };
+  function show(name){
+    if (view === 'lander') stopGame();
+    if (view === 'orbit') stopOrbit();
+    view = name;
+    ['hub','lander','orbit','outpost','quiz'].forEach(function(v){ $('#view-' + v).hidden = (v !== name); });
+    refreshHub();
+    window.scrollTo(0, 0);
+    var t = $(titles[name]); if (t) t.focus();
+    if (name === 'lander') resetIdle();
+    if (name === 'orbit') startOrbit();
+    if (name === 'outpost') openOutpost();
+    if (name === 'quiz') startQuiz();
+  }
+  $('#goLander').addEventListener('click', function(){ show('lander'); });
+  $('#goOutpost').addEventListener('click', function(){ show('outpost'); });
+  $('#goOrbit').addEventListener('click', function(){ show('orbit'); });
+  $('#goQuiz').addEventListener('click', function(){ show('quiz'); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-back]'), function(b){ b.addEventListener('click', function(){ show('hub'); }); });
+
+  /* ---------- Mars lander ---------- */
+  var G = 3.71, THRUST = 9.5, FUEL_MAX = 150, BURN = 10;   // m/s^2, m/s^2, units, units per second
+  var W = 400, H = 600, GY = 540, PX = 2;                  // canvas logical size, ground line, pixels per metre
+  var cv = $('#cv'), ctx = cv.getContext('2d');
+  cv.width = W * 2; cv.height = H * 2; ctx.scale(2, 2);
+
+  var keys = { left:false, right:false, thrust:false };
+  var st = null, running = false, raf = 0, last = 0;
+
+  var stars = [], seed = 7;
+  function rnd(){ seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+  for (var s = 0; s < 46; s++) stars.push({ x: rnd() * W, y: rnd() * 320, r: rnd() * 1.4 + .4, a: rnd() * .6 + .3 });
+  var rocks = [];
+  for (var r = 0; r < 9; r++) rocks.push({ x: rnd() * W, w: 8 + rnd() * 22, h: 4 + rnd() * 8 });
+
+  function newState(){
+    var padX = 60 + Math.random() * 80;
+    var x = Math.max(15, Math.min(185, padX + (Math.random() * 70 - 35)));
+    return { x:x, y:180, vx:(Math.random() * 6 - 3), vy:0, angle:0, fuel:FUEL_MAX, padX:padX, thrusting:false, crashed:false, landed:false };
+  }
+
+  function step(dt){
+    var s = st;
+    if (keys.left)  s.angle -= 100 * dt;
+    if (keys.right) s.angle += 100 * dt;
+    s.angle = Math.max(-70, Math.min(70, s.angle));
+    var rad = s.angle * Math.PI / 180;
+    var ax = 0, ay = -G;
+    s.thrusting = keys.thrust && s.fuel > 0;
+    if (s.thrusting){
+      ax += Math.sin(rad) * THRUST;
+      ay += Math.cos(rad) * THRUST;
+      s.fuel = Math.max(0, s.fuel - BURN * dt);
+    }
+    s.vx += ax * dt; s.vy += ay * dt;
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    if (s.x < 0){ s.x = 0; s.vx = 0; }
+    if (s.x > 200){ s.x = 200; s.vx = 0; }
+    if (s.y > 300){ s.y = 300; if (s.vy > 0) s.vy = 0; }
+    if (s.y <= 0){ s.y = 0; finish(); }
+  }
+
+  function finish(){
+    running = false; cancelAnimationFrame(raf);
+    var s = st, down = -s.vy, side = Math.abs(s.vx), tilt = Math.abs(s.angle);
+    var onPad = Math.abs(s.x - s.padX) <= 25;
+    var problems = [];
+    if (down > 3) problems.push('falling at ' + down.toFixed(1) + ' m/s (limit 3)');
+    if (side > 2) problems.push('drifting sideways at ' + side.toFixed(1) + ' m/s (limit 2)');
+    if (tilt > 10) problems.push('tilted ' + Math.round(tilt) + '° (limit 10°)');
+    if (!onPad) problems.push('missed the landing pad');
+    s.thrusting = false;
+    var box = $('#result');
+    box.classList.remove('win', 'lose');
+    if (problems.length === 0){
+      s.landed = true;
+      var first = !progress.landed;
+      progress.landed = true; save(); refreshHub();
+      box.classList.add('win');
+      $('#resultTitle').textContent = 'Touchdown! Mission complete';
+      $('#resultText').textContent = 'You landed at ' + down.toFixed(1) + ' m/s with ' + Math.round(s.fuel / FUEL_MAX * 100) + '% fuel left. ' + (first ? 'You earned 100 XP and the Mars Lander badge.' : 'You already have this badge. Try landing with more fuel left.');
+      $('#goBtn').textContent = 'Land again';
+    } else {
+      s.crashed = true;
+      box.classList.add('lose');
+      $('#resultTitle').textContent = 'Landing failed';
+      $('#resultText').textContent = 'You were ' + problems.join(', ') + '.';
+      $('#goBtn').textContent = 'Try again';
+    }
+    $('#goBtn').hidden = false;
+    draw(); telemetry();
+  }
+
+  function loop(t){
+    if (!running) return;
+    var dt = Math.min(.05, (t - last) / 1000); last = t;
+    step(dt);
+    draw(); telemetry();
+    if (running) raf = requestAnimationFrame(loop);
+  }
+
+  function startGame(){
+    st = newState();
+    keys.left = keys.right = keys.thrust = false;
+    running = true;
+    var box = $('#result'); box.classList.remove('win', 'lose');
+    $('#resultTitle').textContent = 'Descent in progress';
+    $('#resultText').textContent = 'Hold the engine to slow down. Tilt to steer toward the pad.';
+    $('#goBtn').hidden = true;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    last = performance.now();
+    raf = requestAnimationFrame(loop);
+  }
+  function stopGame(){ running = false; cancelAnimationFrame(raf); keys.left = keys.right = keys.thrust = false; }
+  function resetIdle(){
+    stopGame();
+    st = newState();
+    var box = $('#result'); box.classList.remove('win', 'lose');
+    $('#resultTitle').textContent = 'Ready for launch?';
+    $('#resultText').textContent = 'Press start, then hold the engine to slow your fall.';
+    $('#goBtn').textContent = 'Start landing'; $('#goBtn').hidden = false;
+    draw(); telemetry();
+  }
+  $('#goBtn').addEventListener('click', startGame);
+
+  function telemetry(){
+    var s = st, down = -s.vy;
+    $('#tAlt').textContent = Math.max(0, Math.round(s.y));
+    $('#tVy').textContent = down.toFixed(1);
+    $('#tVx').textContent = Math.abs(s.vx).toFixed(1);
+    $('#tAng').textContent = Math.round(s.angle);
+    var pct = Math.round(s.fuel / FUEL_MAX * 100);
+    $('#fuelTxt').textContent = pct + '%';
+    $('#fuelBar').style.width = pct + '%';
+    var el = $('#vyState');
+    if (down < 0){ el.textContent = 'Climbing'; el.className = 'state ok'; }
+    else if (down <= 3){ el.textContent = 'Safe'; el.className = 'state ok'; }
+    else { el.textContent = 'Too fast'; el.className = 'state warn'; }
+  }
+
+  function draw(){
+    var s = st, i;
+    var g = ctx.createLinearGradient(0, 0, 0, GY);
+    g.addColorStop(0, '#090D1F'); g.addColorStop(.6, '#3A1B2E'); g.addColorStop(1, '#B5573A');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    for (i = 0; i < stars.length; i++){ ctx.globalAlpha = stars[i].a; ctx.beginPath(); ctx.arc(stars[i].x, stars[i].y, stars[i].r, 0, 6.2832); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    // distant ridge
+    ctx.fillStyle = '#5E2A22';
+    ctx.beginPath(); ctx.moveTo(0, GY);
+    ctx.lineTo(0, GY - 30); ctx.lineTo(70, GY - 58); ctx.lineTo(130, GY - 28); ctx.lineTo(210, GY - 70); ctx.lineTo(290, GY - 34); ctx.lineTo(350, GY - 52); ctx.lineTo(W, GY - 26); ctx.lineTo(W, GY);
+    ctx.closePath(); ctx.fill();
+    // ground
+    ctx.fillStyle = '#7C3A25'; ctx.fillRect(0, GY, W, H - GY);
+    ctx.fillStyle = '#6A301F';
+    for (i = 0; i < rocks.length; i++){ ctx.beginPath(); ctx.ellipse(rocks[i].x, GY + 14 + (i % 3) * 14, rocks[i].w, rocks[i].h, 0, 0, 6.2832); ctx.fill(); }
+    // pad
+    var cx = s.padX * PX;
+    ctx.fillStyle = '#6EE7D5'; ctx.fillRect(cx - 50, GY - 3, 100, 6);
+    ctx.fillStyle = '#EAF0FF'; ctx.fillRect(cx - 52, GY - 14, 4, 14); ctx.fillRect(cx + 48, GY - 14, 4, 14);
+    ctx.fillStyle = '#6EE7D5'; ctx.fillRect(cx - 52, GY - 16, 4, 3); ctx.fillRect(cx + 48, GY - 16, 4, 3);
+    // lander
+    var px = s.x * PX, py = GY - s.y * PX;
+    ctx.save();
+    ctx.translate(px, py - 14);
+    ctx.rotate(s.angle * Math.PI / 180);
+    if (s.thrusting){
+      var fl = 14 + Math.random() * 10;
+      ctx.fillStyle = '#FFB347';
+      ctx.beginPath(); ctx.moveTo(-5, 8); ctx.lineTo(0, 8 + fl); ctx.lineTo(5, 8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#FFF1B8';
+      ctx.beginPath(); ctx.moveTo(-2.5, 8); ctx.lineTo(0, 8 + fl * .55); ctx.lineTo(2.5, 8); ctx.closePath(); ctx.fill();
+    }
+    ctx.strokeStyle = '#C9D3F5'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-8, 6); ctx.lineTo(-15, 14); ctx.moveTo(8, 6); ctx.lineTo(15, 14); ctx.moveTo(-19, 14); ctx.lineTo(-11, 14); ctx.moveTo(11, 14); ctx.lineTo(19, 14); ctx.stroke();
+    ctx.fillStyle = '#EAF0FF';
+    ctx.beginPath(); ctx.moveTo(-10, 8); ctx.lineTo(-10, -6); ctx.quadraticCurveTo(0, -22, 10, -6); ctx.lineTo(10, 8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#FF8A4C'; ctx.fillRect(-10, 2, 20, 4);
+    ctx.fillStyle = '#1A2342'; ctx.beginPath(); ctx.arc(0, -5, 4, 0, 6.2832); ctx.fill();
+    ctx.restore();
+    if (s.crashed){
+      ctx.fillStyle = 'rgba(255,170,80,.75)'; ctx.beginPath(); ctx.arc(px, GY - 8, 22, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = 'rgba(255,240,190,.9)'; ctx.beginPath(); ctx.arc(px, GY - 8, 11, 0, 6.2832); ctx.fill();
+    }
+  }
+
+  /* controls */
+  var keyMap = { ArrowLeft:'left', a:'left', A:'left', ArrowRight:'right', d:'right', D:'right', ArrowUp:'thrust', w:'thrust', W:'thrust', ' ':'thrust' };
+  window.addEventListener('keydown', function(e){
+    if (view !== 'lander') return;
+    var k = keyMap[e.key]; if (!k) return;
+    if (running) e.preventDefault();
+    keys[k] = true;
+  });
+  window.addEventListener('keyup', function(e){
+    if (view !== 'lander') return;
+    var k = keyMap[e.key]; if (!k) return;
+    keys[k] = false;
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#touchPad button'), function(b){
+    var k = b.getAttribute('data-key');
+    function on(e){ e.preventDefault(); keys[k] = true; }
+    function off(){ keys[k] = false; }
+    b.addEventListener('pointerdown', on);
+    b.addEventListener('pointerup', off);
+    b.addEventListener('pointerleave', off);
+    b.addEventListener('pointercancel', off);
+    b.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  });
+
+  /* ---------- outpost commander ---------- */
+  var NASA_API_KEY = 'DEMO_KEY';   // Replace with your own free key from api.nasa.gov for higher rate limits.
+  /*SIM-START*/
+  var OP = { BASE:24, HEAT:15, LSS:12, GH:8, SOLAR:12, REACTOR:45, BAT:25, GHY:12, USE:28, PACK:14, FOOD:16.8, LIMIT:120, WEEKS:12, SHELTER:10, COMMS:6 };
+  var SITES = {
+    moon:{ name:'The Moon', budget:120, gcr:9.8, spe:45,
+      blurb:'Nothing blocks space radiation here, and the Sun goes down for two weeks at a time. More cargo fits on the rocket.' },
+    mars:{ name:'Mars', budget:100, gcr:4.6, spe:12,
+      blurb:'Thin air blocks some radiation, but sunlight is weak and dust storms can hide the Sun for weeks. Less cargo fits.' }
+  };
+  var ITEMS = [
+    { id:'solar', name:'Solar arrays', cost:3, max:12, desc:'Free power when the Sun shines. Each makes 12 PU a week in full sun, less than half that on Mars, and nothing at night.' },
+    { id:'battery', name:'Batteries', cost:3, max:12, desc:'Each one stores 25 PU for nights and storms.' },
+    { id:'reactor', name:'Fission reactor', cost:26, max:1, desc:'A small nuclear power plant. It makes 45 PU a week day and night. It is heavy.' },
+    { id:'greenhouse', name:'Greenhouses', cost:8, max:3, desc:'Each grows 12 kg of food a week and uses 8 PU.' },
+    { id:'lss', name:'Life support recycler', cost:18, max:1, desc:'Cleans air and water so the crew can reuse 90% of it. Uses 12 PU a week. Filters can break.' },
+    { id:'shield', name:'Regolith shielding', cost:10, max:3, desc:'Piles of moon or Mars dirt on the base. Each layer blocks 30% of solar storm radiation, but only 10% of deep-space radiation.' },
+    { id:'food', name:'Food packs', cost:3, max:15, per:'20 kg of food', desc:'Stored food for the crew.' },
+    { id:'air', name:'Air and water packs', cost:2, max:30, desc:'Each pack holds 14 units. One unit is one person’s air and water for one day.' }
+  ];
+  var ARCHIVE = [
+    { cls:'X5.4', date:'7 Mar 2012' },
+    { cls:'X9.3', date:'6 Sep 2017' },
+    { cls:'X5.8', date:'11 May 2024' }
+  ];
+  var TIPS = {
+    storm:'A solar flare is a burst of energy from the Sun. NASA scientists record flares in a database called DONKI, so crews can be warned. Thick walls and storm shelters block most of the radiation.',
+    dust:'Dust storms on Mars can hide the Sun for weeks. In 2018 a giant dust storm cut off the sunlight that powered NASA’s Opportunity rover, and the rover never woke up again.',
+    night:'The Moon turns slowly, so daylight lasts about two weeks and then night lasts about two weeks. Without sunlight, a base needs batteries or a power source that works in the dark.',
+    filter:'On the International Space Station the crew recycles most of its water, and equipment sometimes breaks. Engineers on Earth can help, but far from Earth the crew has to fix things alone.',
+    rest:'In space, bones and muscles get weaker. Astronauts on the space station exercise about two hours a day to stay strong.',
+    farm:'NASA has grown real lettuce and radishes on the space station. Fresh food gives crews vitamins and lifts their mood.',
+    science:'Real astronauts do experiments every day. Studying how living things react to space helps keep future crews healthy.'
+  };
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtDate(ms){ var d = new Date(ms); return d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); }
+  function opCost(cfg){ return ITEMS.reduce(function(t, it){ return t + it.cost * (cfg[it.id] || 0); }, 0); }
+  function opSun(site, w, ev){ if (site === 'moon') return ev.night ? 0 : 1; return ev.dust ? 0.09 : 0.45; }
+  function pickWeeks(n){
+    var pool = [], out = [], i;
+    for (i = 2; i <= OP.WEEKS; i++) pool.push(i);
+    while (out.length < n){ out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]); }
+    return out;
+  }
+  // Game scaling: a bigger real flare class makes a bigger radiation event.
+  function flareSize(cls){
+    var m = /^([A-Z])(\d+(\.\d+)?)/.exec(cls || '');
+    if (!m) return 0;
+    var v = parseFloat(m[2]);
+    if (m[1] === 'X') return v >= 5 ? 1.2 : 0.8;
+    if (m[1] === 'M') return v >= 5 ? 0.4 : 0;
+    return 0;
+  }
+  function opStormsFromFlares(flares, startMs){
+    var byWeek = {}, list;
+    flares.forEach(function(f){
+      var size = flareSize(f.cls);
+      if (!size || isNaN(f.time)) return;
+      var week = Math.floor((f.time - startMs) / 604800000) + 1;
+      if (week < 1 || week > OP.WEEKS) return;
+      if (!byWeek[week] || size > byWeek[week].size) byWeek[week] = { week:week, size:size, cls:f.cls, time:f.time };
+    });
+    list = Object.keys(byWeek).map(function(k){ return byWeek[k]; });
+    list.sort(function(a, b){ return b.size - a.size; });
+    list = list.slice(0, 5);
+    list.forEach(function(x){ x.label = 'NASA DONKI recorded an ' + x.cls + ' solar flare on ' + fmtDate(x.time); });
+    return list;
+  }
+  function opArchiveStorms(){
+    var picks = ARCHIVE.slice().sort(function(){ return Math.random() - 0.5; }).slice(0, 2), weeks = pickWeeks(2);
+    return picks.map(function(a, i){ return { week:weeks[i], size:flareSize(a.cls), cls:a.cls, label:'In history, an ' + a.cls + ' solar flare happened on ' + a.date + ' (archived example)' }; });
+  }
+  function opNewGame(siteKey, cfg, storms, mode){
+    var c = JSON.parse(JSON.stringify(cfg)), i, fail = pickWeeks(1)[0], d0 = 3 + Math.floor(Math.random() * 6), evs = [];
+    function stormFor(w){ var r = null; (storms || []).forEach(function(x){ if (x.week === w) r = x; }); return r; }
+    for (i = 1; i <= OP.WEEKS; i++){
+      var st = stormFor(i);
+      evs.push({ spe: !!st, size: st ? st.size : 0, label: st ? st.label : '', fail: i === fail,
+                 dust: siteKey === 'mars' && (i === d0 || i === d0 + 1), night: siteKey === 'moon' && ((i - 1) % 4) >= 2 });
+    }
+    var cap = c.battery * OP.BAT, air = c.air * OP.PACK, fd = c.food * 20;
+    return { site:siteKey, cfg:c, week:1, power:cap, cap:cap, air:air, food:fd, dose:0, health:100, science:0,
+             events:evs, start:{ air:air, food:fd }, lessons:{}, over:false, ok:false, reasons:[], weatherMode:mode || 'archive' };
+  }
+  function opResolve(s, ch){
+    var w = s.week, ev = s.events[w - 1], c = s.cfg, lines = [], warns = [], reasons = [], i, n, tip = '';
+    var shelter = !!ev.spe && ch.response === 'shelter';
+    var conserve = !!ev.dust && ch.response === 'conserve';
+    var failEv = !!ev.fail && c.lss > 0;
+    var asked = failEv && ch.ask === true;
+    var focus = (shelter || conserve) ? 'none' : ch.focus;
+    var sun = opSun(s.site, w, ev);
+    var gen = c.solar * OP.SOLAR * sun + c.reactor * OP.REACTOR;
+    var baseNeed = OP.BASE + (ev.night ? OP.HEAT : 0) + (shelter ? OP.SHELTER : 0) + (asked ? OP.COMMS : 0) - (conserve ? 10 : 0);
+    var avail = s.power + gen;
+    function take(x){ if (avail >= x){ avail -= x; return true; } return false; }
+    var baseOn = take(baseNeed);
+    var lssOn = baseOn && c.lss > 0 && take(OP.LSS);
+    var ghOn = 0;
+    if (baseOn && !conserve){ for (i = 0; i < c.greenhouse; i++){ if (take(OP.GH)) ghOn++; } }
+    var used = baseOn ? (baseNeed + (lssOn ? OP.LSS : 0) + ghOn * OP.GH) : 0;
+    if (!baseOn) avail = 0;
+    s.power = Math.max(0, Math.min(s.cap, avail));
+    lines.push('Power: made ' + Math.round(gen) + ' PU and used ' + Math.round(used) + ' PU. Batteries hold ' + Math.round(s.power) + ' of ' + s.cap + ' PU.');
+    if (ev.night) lines.push('It is night on the Moon, so the solar arrays made nothing and heaters used extra power.');
+    if (ev.dust) lines.push('Dust in the air blocked most of the sunlight.');
+    if (shelter) lines.push('The storm shelter used ' + OP.SHELTER + ' extra PU.');
+    if (asked) lines.push('The radio link to Earth used ' + OP.COMMS + ' PU.');
+    if (conserve) lines.push('You saved power, so the greenhouses and experiments were paused.');
+    if (!baseOn){
+      lines.push('Blackout! There was not enough power to run the base.');
+      warns.push('Not enough power. The base would black out.');
+      s.lessons.blackout = true;
+    } else {
+      if (c.lss > 0 && !lssOn){
+        lines.push('Power ran short, so the recycler was switched off.');
+        warns.push('Not enough power for the recycler.');
+        s.lessons.lssPower = true;
+      }
+      if (!conserve && ghOn < c.greenhouse){
+        lines.push('Power ran short, so the greenhouses grew less food.');
+        warns.push('The greenhouses would lose power.');
+        s.lessons.ghPower = true;
+      }
+    }
+    var fixedBySelf = failEv && focus === 'maintenance';
+    var fixedByEarth = failEv && asked && s.site === 'moon';
+    var failed = failEv && !fixedBySelf && !fixedByEarth;
+    if (failEv){
+      if (fixedBySelf) lines.push('The crew replaced the failing filter before it clogged.');
+      else if (fixedByEarth) lines.push('Mission Control answered in about a second and talked the crew through the repair.');
+      else if (asked && lssOn){
+        lines.push('You asked Mission Control, but radio messages take 3 to 22 minutes each way between Mars and Earth. The filter clogged before the answer came.');
+        s.lessons.comm = true;
+      }
+    }
+    var lssWorks = lssOn && !failed;
+    if (failed && lssOn){
+      if (!asked) lines.push('A filter in the recycler clogged and it stopped working for the week.');
+      warns.push('The recycler filter would clog and stop working.');
+      s.lessons.lssFail = true;
+    } else if (lssWorks){
+      lines.push('The recycler cleaned and reused 90% of the air and water.');
+    }
+    var k = lssWorks ? 0.1 : 1;
+    var useAir = OP.USE * k;
+    var prod = ghOn * OP.GHY * (focus === 'farming' ? 1.5 : 1);
+    var sh = { air:false, food:false };
+    n = s.air - useAir; if (n < 0){ sh.air = true; n = 0; } s.air = n;
+    n = s.food + prod - OP.FOOD; if (n < 0){ sh.food = true; n = 0; } s.food = n;
+    lines.push('The crew used ' + useAir.toFixed(1) + ' units of air and water and ate ' + OP.FOOD + ' kg of food. The greenhouses grew ' + prod.toFixed(1) + ' kg.');
+    var dmg = 0;
+    if (!baseOn){ dmg += 25; reasons.push('the blackout'); }
+    if (sh.air){ dmg += 40; reasons.push('running out of air and water'); lines.push('The crew ran out of air and water.'); warns.push('Air and water would run out.'); s.lessons.air = true; }
+    if (sh.food){ dmg += 12; reasons.push('hunger'); lines.push('The crew ran short of food.'); warns.push('Food would run out.'); s.lessons.food = true; }
+    var site = SITES[s.site];
+    var gcr = site.gcr * (1 - 0.10 * c.shield);
+    var spe = ev.spe ? site.spe * ev.size * (1 - 0.30 * c.shield) * (shelter ? 0.15 : 1) : 0;
+    s.dose += gcr + spe;
+    lines.push('Radiation: ' + (gcr + spe).toFixed(1) + ' mSv this week. Total so far: ' + s.dose.toFixed(1) + ' of ' + OP.LIMIT + ' mSv.');
+    if (ev.spe) lines.push((ev.label ? ev.label + '. ' : '') + (shelter ? 'The crew sheltered from the storm.' : 'The storm hit while the crew was working.'));
+    if (s.dose > OP.LIMIT){
+      dmg += 15; reasons.push('too much radiation');
+      lines.push('The crew went over the mission radiation limit.');
+      warns.push('You would go over the radiation limit.');
+      s.lessons.dose = true;
+    }
+    var sci = 0;
+    if (focus !== 'none') sci = (focus === 'science') ? 10 : 3;
+    s.science += sci;
+    lines.push('Science: +' + sci + ' points.');
+    var before = s.health;
+    var heal = (dmg === 0) ? 5 + (focus === 'rest' ? 10 : 0) : 0;
+    s.health = Math.max(0, Math.min(100, s.health - dmg + heal));
+    if (dmg > 0) lines.push('Crew health fell by ' + dmg + ' because of ' + reasons.join(' and ') + '.');
+    else if (s.health > before) lines.push('Crew health rose by ' + (s.health - before) + '.');
+    if (ev.spe) tip = TIPS.storm;
+    else if (ev.dust) tip = TIPS.dust;
+    else if (ev.night) tip = TIPS.night;
+    else if (failEv) tip = TIPS.filter;
+    else if (focus === 'rest') tip = TIPS.rest;
+    else if (focus === 'farming') tip = TIPS.farm;
+    else if (focus === 'science') tip = TIPS.science;
+    if (s.health <= 0){ s.over = true; s.ok = false; s.reasons = reasons; }
+    else if (w >= OP.WEEKS){
+      s.over = true; s.ok = s.dose <= OP.LIMIT;
+      if (!s.ok){ s.radFail = true; s.reasons = ['too much radiation']; }
+    }
+    else { s.week++; }
+    return { lines:lines, warns:warns, tip:tip };
+  }
+  function opPlanChecks(siteKey, c){
+    var out = [], site = SITES[siteKey], W = OP.WEEKS;
+    var sunDay = siteKey === 'moon' ? 1 : 0.45;
+    var genDay = c.solar * OP.SOLAR * sunDay + c.reactor * OP.REACTOR;
+    var load = OP.BASE + (c.lss ? OP.LSS : 0) + c.greenhouse * OP.GH;
+    var cap = c.battery * OP.BAT;
+    out.push({ ok: genDay >= load, text:'Power in good light: you make ' + Math.round(genDay) + ' PU a week and use ' + load + '.' });
+    if (siteKey === 'moon'){
+      var gap = Math.max(0, load + OP.HEAT - c.reactor * OP.REACTOR) * 2;
+      var charge = Math.max(0, genDay - load) * 2;
+      if (gap === 0) out.push({ ok:true, text:'Moon night lasts about two weeks. Your reactor keeps the base running in the dark.' });
+      else out.push({ ok: cap >= gap && charge >= gap, text:'Moon night lasts about two weeks. You would be short ' + Math.round(gap) + ' PU. Your batteries hold ' + cap + ' PU, and the daytime extra power can recharge ' + Math.round(charge) + ' PU.' });
+    } else {
+      var gapD = Math.max(0, load - (c.solar * OP.SOLAR * 0.09 + c.reactor * OP.REACTOR)) * 2;
+      if (gapD === 0) out.push({ ok:true, text:'A dust storm can last about two weeks. Your power keeps running through it.' });
+      else out.push({ ok: cap >= gapD, text:'A dust storm can last about two weeks. You would be short ' + Math.round(gapD) + ' PU. Your batteries hold ' + cap + ' PU.' });
+    }
+    var k = c.lss ? 0.1 : 1;
+    var needAir = OP.USE * k * W, haveAir = c.air * OP.PACK;
+    out.push({ ok: haveAir >= needAir, text:'Air and water for 12 weeks' + (c.lss ? ' with the recycler' : ' without a recycler') + ': the crew needs about ' + Math.ceil(needAir) + ' units. You packed ' + haveAir + '.' });
+    if (c.lss){
+      var spare = OP.USE * 0.9;
+      out.push({ ok: haveAir >= needAir + spare, text:'Spare for one week if the recycler breaks: about ' + Math.ceil(spare) + ' more units.' });
+    }
+    var haveF = c.food * 20, grow = c.greenhouse * OP.GHY * W, needF = OP.FOOD * W;
+    out.push({ ok: haveF + grow >= needF, text:'Food: the crew eats about ' + Math.ceil(needF) + ' kg in 12 weeks. You packed ' + haveF + ' kg, and greenhouses could grow ' + grow + ' kg.' });
+    var dose = site.gcr * (1 - 0.10 * c.shield) * W + 2 * site.spe * 0.8 * (1 - 0.30 * c.shield) * 0.15;
+    out.push({ ok: dose <= OP.LIMIT, text:'Radiation over 12 weeks, if the crew shelters in two big storms: about ' + Math.round(dose) + ' of the ' + OP.LIMIT + ' mSv limit.' });
+    return out;
+  }
+  /*SIM-END*/
+
+  var FOCI = [
+    { id:'science', name:'Science', sub:'Explore and run experiments. Earns 10 science points.' },
+    { id:'farming', name:'Farming', sub:'Tend the greenhouses so they grow 50% more food. Earns 3 science points.' },
+    { id:'maintenance', name:'Maintenance', sub:'Fix and replace parts. Stops a failing filter from breaking. Earns 3 science points.' },
+    { id:'rest', name:'Rest and exercise', sub:'The crew gets extra health back. Earns 3 science points.' }
+  ];
+  var opDraft = { site:'moon', cfg:{ solar:4, battery:2, reactor:0, greenhouse:1, lss:1, shield:1, food:3, air:5 } };
+  var op = null, opChoice = { focus:'science', response:null, ask:false };
+
+  /* ----- real NASA data: space weather (DONKI) and radiation (RadLab) ----- */
+  var opSpace = { mode:'archive', storms:null, text:'' };
+  var opSpaceTried = false;
+  function renderWeather(){ var n = $('#opWeather'); if (n) n.textContent = 'Space weather: ' + opSpace.text; }
+  function loadSpaceWeather(){
+    if (opSpaceTried){ renderWeather(); return; }
+    opSpaceTried = true;
+    opSpace = { mode:'loading', storms:null, text:'checking NASA for real solar flares...' }; renderWeather();
+    var end = new Date(), start = new Date(end.getTime() - 84 * 86400000);
+    function iso(d){ return d.toISOString().slice(0, 10); }
+    function archive(msg){ opSpace = { mode:'archive', storms:null, text:msg }; renderWeather(); }
+    var url = 'https://api.nasa.gov/DONKI/FLR?startDate=' + iso(start) + '&endDate=' + iso(end) + '&api_key=' + NASA_API_KEY;
+    fetch(url).then(function(r){ if (!r.ok) throw new Error('status'); return r.json(); }).then(function(list){
+      var flares = (Array.isArray(list) ? list : []).map(function(f){ return { cls:f.classType, time:Date.parse(f.peakTime || f.beginTime) }; });
+      var storms = opStormsFromFlares(flares, start.getTime());
+      if (storms.length){
+        opSpace = { mode:'live', storms:storms, text:'live data from NASA DONKI. Your 12 weeks replay the real solar flares from ' + fmtDate(start.getTime()) + ' to ' + fmtDate(end.getTime()) + '.' };
+        renderWeather();
+      } else {
+        archive('the Sun was quiet over the last 12 weeks, so this mission uses archived examples of real solar flares (not live).');
+      }
+    }).catch(function(){
+      archive('NASA’s live data could not be reached from this page, so this mission uses archived examples of real solar flares (not live).');
+    });
+  }
+  function collectKey(o, key, out){
+    if (Array.isArray(o)){ o.forEach(function(x){ collectKey(x, key, out); }); }
+    else if (o && typeof o === 'object'){
+      Object.keys(o).forEach(function(k){
+        if (k.toLowerCase() === key && typeof o[k] === 'number') out.push(o[k]); else collectKey(o[k], key, out);
+      });
+    }
+  }
+  function csvColumn(txt, key){
+    var rows = txt.split(/\r?\n/).filter(function(r){ return r.length; });
+    if (rows.length < 2) return [];
+    var head = rows[0].split(',').map(function(h){ return h.trim().toLowerCase(); });
+    var idx = head.indexOf(key); if (idx < 0) return [];
+    var out = [];
+    rows.slice(1).forEach(function(r){ var v = parseFloat(r.split(',')[idx]); if (!isNaN(v)) out.push(v); });
+    return out;
+  }
+  function loadRadLab(){
+    var url = 'https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&timestamp%3E=2022-04-01T23%3A00&timestamp%3C2022-04-02T01%3A05&absorbed_dose_rate%3E2&format=json';
+    fetch(url).then(function(r){ if (!r.ok) throw new Error('status'); return r.text(); }).then(function(txt){
+      var vals = [];
+      try { collectKey(JSON.parse(txt), 'absorbed_dose_rate', vals); } catch (e) { vals = []; }
+      if (!vals.length) vals = csvColumn(txt, 'absorbed_dose_rate');
+      if (!vals.length) throw new Error('no data');
+      var avg = vals.reduce(function(a, b){ return a + b; }, 0) / vals.length;
+      var n = $('#radlabNote');
+      n.textContent = 'Live from NASA RadLab: ' + vals.length + ' sample readings from the International Space Station (DosTel instrument, 1 April 2022, readings above 2) averaged about ' + avg.toFixed(1) + ' µGy per hour of absorbed radiation dose.';
+      n.hidden = false;
+    }).catch(function(){});
+  }
+
+  function opShow(name){ ['Design', 'Play', 'End'].forEach(function(n){ $('#op' + n).hidden = (n !== name); }); }
+  function openOutpost(){ op = null; opShow('Design'); renderDesign(); loadSpaceWeather(); }
+
+  function renderDesign(){
+    var site = SITES[opDraft.site], cfg = opDraft.cfg;
+    var box = $('#opSites'); box.textContent = '';
+    Object.keys(SITES).forEach(function(key){
+      var b = el('button', 'opt' + (opDraft.site === key ? ' sel' : '')); b.type = 'button';
+      b.setAttribute('aria-pressed', opDraft.site === key ? 'true' : 'false');
+      b.appendChild(document.createTextNode(SITES[key].name));
+      b.appendChild(el('span', 'sub', SITES[key].blurb + ' Cargo budget: ' + SITES[key].budget + ' units.'));
+      b.addEventListener('click', function(){ opDraft.site = key; renderDesign(); });
+      box.appendChild(b);
+    });
+    renderWeather();
+    var used = opCost(cfg), left = site.budget - used;
+    $('#opBudgetTxt').textContent = used + ' of ' + site.budget + ' units' + (left < 0 ? ' (over budget)' : '');
+    $('#opBudgetFill').style.width = Math.min(100, used / site.budget * 100) + '%';
+    $('#opBudgetBar').className = 'bar' + (left < 0 ? ' low' : '');
+    var items = $('#opItems'); items.textContent = '';
+    ITEMS.forEach(function(it){
+      var row = el('div', 'item');
+      var info = el('div', 'info');
+      info.appendChild(el('strong', '', it.name));
+      info.appendChild(el('span', 'sub', it.desc));
+      info.appendChild(el('span', 'cost', it.cost + ' cargo units' + (it.per ? ' for ' + it.per : ' each')));
+      row.appendChild(info);
+      var st = el('div', 'stepper');
+      var minus = el('button', 'btn ghost', '−'); minus.type = 'button'; minus.id = 'opm-' + it.id;
+      minus.setAttribute('aria-label', 'Remove one ' + it.name); minus.disabled = cfg[it.id] <= 0;
+      var out = el('output', '', String(cfg[it.id]));
+      var plus = el('button', 'btn ghost', '+'); plus.type = 'button'; plus.id = 'opp-' + it.id;
+      plus.setAttribute('aria-label', 'Add one ' + it.name); plus.disabled = cfg[it.id] >= it.max || it.cost > left;
+      minus.addEventListener('click', function(){ bump(it.id, -1); });
+      plus.addEventListener('click', function(){ bump(it.id, 1); });
+      st.appendChild(minus); st.appendChild(out); st.appendChild(plus);
+      row.appendChild(st);
+      items.appendChild(row);
+    });
+    var ul = $('#opChecks'); ul.textContent = '';
+    if (left < 0){
+      var li0 = el('li'); li0.appendChild(el('span', 'chip warn', 'Check')); li0.appendChild(el('span', '', 'You are over budget by ' + (-left) + ' units. Remove something to launch.')); ul.appendChild(li0);
+    }
+    opPlanChecks(opDraft.site, cfg).forEach(function(c){
+      var li = el('li'); li.appendChild(el('span', 'chip ' + (c.ok ? 'ok' : 'warn'), c.ok ? 'OK' : 'Check')); li.appendChild(el('span', '', c.text)); ul.appendChild(li);
+    });
+    $('#opStart').disabled = left < 0;
+  }
+  function bump(id, d){
+    var it = ITEMS.filter(function(x){ return x.id === id; })[0];
+    opDraft.cfg[id] = Math.max(0, Math.min(it.max, opDraft.cfg[id] + d));
+    renderDesign();
+    var t = document.getElementById((d > 0 ? 'opp-' : 'opm-') + id);
+    if (!t || t.disabled) t = document.getElementById((d > 0 ? 'opm-' : 'opp-') + id);
+    if (t && !t.disabled) t.focus();
+  }
+
+  function statBlock(label, val, pct, hint, low){
+    var d = el('div', 'stat'), r = el('div', 'row');
+    r.appendChild(el('span', '', label)); r.appendChild(el('span', '', val)); d.appendChild(r);
+    var bar = el('div', 'bar' + (low ? ' low' : '')), f = document.createElement('span');
+    f.style.width = Math.max(0, Math.min(100, pct)) + '%'; bar.appendChild(f); d.appendChild(bar);
+    if (hint) d.appendChild(el('span', 'hint', hint));
+    return d;
+  }
+  function weeksHint(key, sim){
+    var cur = op[key];
+    if (cur <= 0.05) return 'Empty';
+    if (!sim) return '';
+    var net = sim.s[key] - cur;
+    if (net >= -0.05) return net > 0.05 ? 'Growing' : 'Holding steady';
+    var wk = cur / -net, left = OP.WEEKS - op.week + 1;
+    return wk >= left ? 'Enough for the rest of the mission at this rate' : 'About ' + Math.floor(wk) + ' weeks left at this rate';
+  }
+  function opSim(){
+    var c = JSON.parse(JSON.stringify(op));
+    var rep = opResolve(c, opChoice);
+    return { s:c, rep:rep };
+  }
+  function opRenderStatus(sim){
+    var s = op, box = $('#opStatus'); box.textContent = '';
+    box.appendChild(el('h3', '', 'Outpost status'));
+    box.appendChild(statBlock('Power', Math.round(s.power) + ' / ' + s.cap + ' PU', s.cap ? s.power / s.cap * 100 : 0, s.cap ? 'Stored in batteries' : 'No batteries packed', s.cap > 0 && s.power / s.cap < 0.25));
+    box.appendChild(statBlock('Air and water', Math.round(s.air) + ' units', s.start.air ? s.air / s.start.air * 100 : 0, weeksHint('air', sim), s.air < 0.2 * s.start.air));
+    box.appendChild(statBlock('Food', Math.round(s.food) + ' kg', s.start.food ? s.food / s.start.food * 100 : 0, weeksHint('food', sim), s.food < 0.2 * s.start.food));
+    box.appendChild(statBlock('Radiation dose', s.dose.toFixed(1) + ' / ' + OP.LIMIT + ' mSv', s.dose / OP.LIMIT * 100, 'The limit for this mission', s.dose >= 0.8 * OP.LIMIT));
+    box.appendChild(statBlock('Crew health', Math.round(s.health) + '%', s.health, '', s.health < 40));
+    box.appendChild(statBlock('Science', s.science + ' points', s.science, '', false));
+  }
+  function opRenderForecast(){
+    var s = op, ev = s.events[s.week - 1], box = $('#opForecast'); box.textContent = '';
+    function p(label, text){ var n = el('p'); n.appendChild(el('strong', '', label + ' ')); n.appendChild(document.createTextNode(text)); box.appendChild(n); }
+    if (s.site === 'moon'){
+      if (ev.night) p('Moon night.', 'The Sun is down for about two weeks. Solar arrays make nothing and heaters use 15 extra PU.');
+      else p('Daylight.', 'Your solar arrays are working at full strength.');
+      p('Radio delay.', 'Messages between the Moon and Earth take about 1 second.');
+    } else {
+      if (ev.dust) p('Dust storm.', 'Sunlight is almost blocked, so solar arrays make very little power.');
+      else p('Clear sky.', 'Sunlight on Mars is less than half as strong as on Earth.');
+      p('Radio delay.', 'Messages between Mars and Earth take 3 to 22 minutes each way.');
+    }
+    if (ev.spe) p('Solar storm alert.', (ev.label ? ev.label + '. ' : '') + 'A storm of radiation will reach the outpost this week.');
+    if (ev.fail && s.cfg.lss > 0) p('Repair alert.', 'A filter in the recycler is close to clogging.');
+  }
+  function radioGroup(container, legend, name, options, current, onChange){
+    container.textContent = '';
+    var fs = document.createElement('fieldset'); fs.appendChild(el('legend', '', legend));
+    options.forEach(function(o){
+      var lab = el('label', 'choice'), inp = document.createElement('input');
+      inp.type = 'radio'; inp.name = name; inp.value = o.id; inp.checked = (o.id === current);
+      inp.addEventListener('change', function(){ onChange(o.id); });
+      var txt = el('span'); txt.appendChild(document.createTextNode(o.name)); txt.appendChild(el('span', 'sub', o.sub));
+      lab.appendChild(inp); lab.appendChild(txt); fs.appendChild(lab);
+    });
+    container.appendChild(fs);
+  }
+  function beginWeek(){
+    var ev = op.events[op.week - 1];
+    opChoice = { focus:'science', response: ev.spe ? 'shelter' : (ev.dust ? 'normal' : null), ask:false };
+    $('#opWeekTitle').textContent = 'Week ' + op.week + ' of ' + OP.WEEKS;
+    $('#opReportBox').hidden = true; $('#opControls').hidden = false;
+    opRenderForecast();
+    var dec = $('#opDecision'); dec.textContent = '';
+    function group(){ var d = document.createElement('div'); dec.appendChild(d); d.style.marginBottom = '14px'; return d; }
+    if (ev.spe){
+      radioGroup(group(), 'Solar storm: what do you do?', 'opresp', [
+        { id:'shelter', name:'Go to the storm shelter', sub:'Blocks most of the radiation. It uses ' + OP.SHELTER + ' extra PU, and the crew cannot do focus work this week.' },
+        { id:'work', name:'Keep working', sub:'The crew gets the full storm radiation, reduced only by your shielding.' }
+      ], opChoice.response, function(v){ opChoice.response = v; opRefresh(); });
+    } else if (ev.dust){
+      radioGroup(group(), 'Dust storm: what do you do?', 'opresp', [
+        { id:'normal', name:'Keep working as usual', sub:'Greenhouses and experiments keep running if there is enough power.' },
+        { id:'conserve', name:'Save power', sub:'Shut the greenhouses and pause experiments to use less power.' }
+      ], opChoice.response, function(v){ opChoice.response = v; opRefresh(); });
+    }
+    if (ev.fail && op.cfg.lss > 0){
+      radioGroup(group(), 'A filter is failing: what do you do?', 'opask', [
+        { id:'self', name:'Fix it yourself', sub:'Choose Maintenance as the crew focus below. Any other focus will not stop the filter from clogging.' },
+        { id:'ask', name:'Ask Mission Control for help', sub:'The radio uses ' + OP.COMMS + ' PU. ' + (op.site === 'moon' ? 'On the Moon the answer comes back in about a second.' : 'On Mars, radio messages take 3 to 22 minutes each way.') }
+      ], 'self', function(v){ opChoice.ask = (v === 'ask'); opRefresh(); });
+    }
+    radioGroup($('#opFocus'), 'What should the crew focus on this week?', 'opfocus', FOCI, opChoice.focus, function(v){ opChoice.focus = v; opRefresh(); });
+    opRefresh();
+    $('#opWeekTitle').focus();
+  }
+  function opRefresh(){
+    var dis = opChoice.response === 'shelter' || opChoice.response === 'conserve';
+    var fs = document.querySelector('#opFocus fieldset'); if (fs) fs.disabled = dis;
+    var sim = opSim();
+    opRenderStatus(sim);
+    var ul = $('#opPreview'); ul.textContent = '';
+    function row(t){ ul.appendChild(el('li', '', t)); }
+    sim.rep.warns.forEach(function(w){ row('Warning: ' + w); });
+    row('Power ' + Math.round(op.power) + ' to ' + Math.round(sim.s.power) + ' PU');
+    row('Air and water ' + Math.round(op.air) + ' to ' + Math.round(sim.s.air) + ' units');
+    row('Food ' + Math.round(op.food) + ' to ' + Math.round(sim.s.food) + ' kg');
+    row('Radiation dose ' + op.dose.toFixed(1) + ' to ' + sim.s.dose.toFixed(1) + ' mSv');
+    row('Crew health ' + Math.round(op.health) + '% to ' + Math.round(sim.s.health) + '%');
+  }
+  function startMission(){
+    var live = opSpace.mode === 'live' && opSpace.storms;
+    op = opNewGame(opDraft.site, opDraft.cfg, live ? opSpace.storms : opArchiveStorms(), live ? 'live' : 'archive');
+    opShow('Play');
+    beginWeek();
+    window.scrollTo(0, 0);
+  }
+  $('#opStart').addEventListener('click', startMission);
+  $('#opRun').addEventListener('click', function(){
+    if (!op || op.over) return;
+    var rep = opResolve(op, opChoice);
+    $('#opControls').hidden = true;
+    var ul = $('#opReport'); ul.textContent = '';
+    rep.lines.forEach(function(t){ ul.appendChild(el('li', '', t)); });
+    var tip = $('#opTip'); tip.textContent = '';
+    if (rep.tip){ tip.appendChild(el('strong', '', 'Real science: ')); tip.appendChild(document.createTextNode(rep.tip)); tip.hidden = false; } else { tip.hidden = true; }
+    $('#opNext').textContent = op.over ? 'See results' : 'Start week ' + op.week;
+    $('#opReportBox').hidden = false;
+    opRenderStatus(null);
+    $('#opReportTitle').focus();
+  });
+  $('#opNext').addEventListener('click', function(){ if (op.over) renderEnd(); else beginWeek(); });
+
+  var LESSONS = {
+    blackout:'Power ran out. Batteries and a power source that works in the dark, like a small nuclear reactor, keep a base running through a Moon night or a dust storm.',
+    lssPower:'The recycler shut down because power ran short. Air and water depend on power, so protect it first.',
+    ghPower:'The greenhouses lost power. Growing food uses electricity, so your food plan and power plan have to match.',
+    lssFail:'The recycler broke for a week and the crew used up stored air and water. Spare supplies and quick repairs are the safety net.',
+    air:'The crew ran out of air and water. A recycler saves a lot of cargo, but keep spare supplies in case it breaks.',
+    food:'Food ran short. Greenhouses save cargo over 12 weeks, but only if they have power.',
+    comm:'Radio messages between Earth and Mars take 3 to 22 minutes each way. A crew on Mars cannot wait for answers during an emergency.',
+    dose:'Radiation went over the limit. Regolith blocks solar storm particles well but deep-space radiation only a little, so going to the shelter during a storm matters most.'
+  };
+  function renderEnd(){
+    opShow('End');
+    var s = op, box = $('#opEndBody'); box.textContent = '';
+    var first = false;
+    if (s.ok && !progress.outpost){ progress.outpost = true; first = true; save(); }
+    refreshHub();
+    box.appendChild(el('p', 'eyebrow', s.ok ? 'Mission complete' : 'Mission failed. Learn and try again'));
+    var title = s.ok ? 'The crew made it through all 12 weeks' : (s.radFail ? 'The crew is safe, but the mission failed' : 'The crew was lost in week ' + s.week);
+    var h = el('h3', '', title); h.id = 'opEndTitle'; h.setAttribute('tabindex', '-1');
+    box.appendChild(h);
+    if (s.radFail) box.appendChild(el('p', 'muted', 'Total radiation was ' + s.dose.toFixed(1) + ' mSv, above the ' + OP.LIMIT + ' mSv limit, so the mission counts as failed. Space agencies set radiation limits to protect astronauts’ health.'));
+    else if (!s.ok && s.reasons.length) box.appendChild(el('p', 'muted', 'Crew health reached zero because of ' + s.reasons.join(' and ') + '. Real mission teams study every failure so the next crew is safer.'));
+    var ul = el('ul', 'report');
+    ul.appendChild(el('li', '', 'Site: ' + SITES[s.site].name));
+    ul.appendChild(el('li', '', 'Space weather: ' + (s.weatherMode === 'live' ? 'real solar flares from NASA DONKI (live data)' : 'archived examples of real solar flares (not live)')));
+    ul.appendChild(el('li', '', 'Science points: ' + s.science));
+    ul.appendChild(el('li', '', 'Crew health: ' + Math.round(s.health) + '%'));
+    ul.appendChild(el('li', '', 'Radiation dose: ' + s.dose.toFixed(1) + ' of ' + OP.LIMIT + ' mSv'));
+    ul.appendChild(el('li', '', 'Left over: ' + Math.round(s.air) + ' units of air and water, ' + Math.round(s.food) + ' kg of food'));
+    box.appendChild(ul);
+    var keys = Object.keys(s.lessons);
+    box.appendChild(el('h3', '', keys.length ? 'What to learn from this' : 'A clean mission'));
+    if (keys.length){
+      var lu = el('ul', 'report');
+      keys.slice(0, 4).forEach(function(k){ if (LESSONS[k]) lu.appendChild(el('li', '', LESSONS[k])); });
+      box.appendChild(lu);
+    } else {
+      box.appendChild(el('p', 'muted', 'Nothing went wrong. Try the other site, or pack less cargo and see how little you can get away with.'));
+    }
+    if (s.ok) box.appendChild(el('p', '', first ? 'You earned 60 XP and the Outpost Commander badge.' : 'You already have this badge. Try to beat your science score.'));
+    var row = el('div', 'result-actions');
+    var again = el('button', 'btn', 'Plan another mission'); again.type = 'button'; again.addEventListener('click', openOutpost);
+    var home = el('button', 'btn ghost', 'Back to missions'); home.type = 'button'; home.addEventListener('click', function(){ show('hub'); });
+    row.appendChild(again); row.appendChild(home); box.appendChild(row);
+    h.focus();
+  }
+  loadRadLab();
+
+  /* ---------- orbit builder ---------- */
+  var MU = 398600, RE = 6371, SPEEDUP = 1200, EARTH_DAY = 86164;   // km^3/s^2, km, time compression, seconds
+  var MISSIONS = [
+    { name:'Space station', blurb:'Astronauts live and work here. Aim for about 400 km up.', lo:300, hi:500 },
+    { name:'Navigation satellite', blurb:'GPS-style satellites circle about twice a day. Aim for about 20,000 km up.', lo:19000, hi:21500 },
+    { name:'Weather satellite over one spot', blurb:'It must match Earth’s spin to hover over the same place. Aim for about 35,800 km up.', lo:35000, hi:36500 }
+  ];
+  var ocv = $('#cv2'), octx = ocv.getContext('2d');
+  ocv.width = 800; ocv.height = 800; octx.scale(2, 2);
+  var ob = { m:0, ang:0.6, earth:0, raf:0, last:0, on:false };
+
+  function oHeight(){ return 200 * Math.pow(190, Number($('#alt').value) / 100); }   // 200 km to 38,000 km
+  function oRing(h){ return 62 + 118 * Math.sqrt(Math.min(1, Math.max(0, h) / 36500)); }
+  function oPeriod(h){ var a = RE + h; return 2 * Math.PI * Math.sqrt(a * a * a / MU); }
+  function fmtPeriod(T){ var m = T / 60; return m < 180 ? Math.round(m) + ' min' : (m / 60).toFixed(1) + ' hours'; }
+  function fmtKm(n){ return Math.round(n).toLocaleString('en-US'); }
+
+  function renderMissions(){
+    var box = $('#missionList'); box.textContent = '';
+    MISSIONS.forEach(function(mi, i){
+      var b = document.createElement('button'); b.type = 'button';
+      b.className = 'opt' + (ob.m === i ? ' sel' : '');
+      b.setAttribute('aria-pressed', ob.m === i ? 'true' : 'false');
+      b.appendChild(document.createTextNode((i + 1) + '. ' + mi.name));
+      if (progress.orbit[i]){ var mk = document.createElement('span'); mk.className = 'mark done'; mk.textContent = 'Done'; b.appendChild(mk); }
+      var sub = document.createElement('span'); sub.className = 'sub'; sub.textContent = mi.blurb; b.appendChild(sub);
+      b.addEventListener('click', function(){ ob.m = i; renderMissions(); resetOResult(); oTele(); oDraw(); });
+      box.appendChild(b);
+    });
+  }
+
+  function resetOResult(){
+    var rb = $('#oResult'); rb.classList.remove('win', 'lose');
+    $('#oTitle').textContent = 'Ready to build';
+    $('#oText').textContent = 'Pick a mission, set the height, then check your orbit.';
+  }
+
+  function oTele(){
+    var h = oHeight(), a = RE + h, v = Math.sqrt(MU / a), mi = MISSIONS[ob.m];
+    $('#oAlt').textContent = fmtKm(h);
+    $('#oSpd').textContent = v.toFixed(1);
+    $('#oLap').textContent = fmtPeriod(oPeriod(h));
+    var inZone = h >= mi.lo && h <= mi.hi, z = $('#oZone');
+    z.textContent = inZone ? 'In target zone' : (h < mi.lo ? 'Too low' : 'Too high');
+    z.className = 'state ' + (inZone ? 'ok' : 'warn');
+    $('#alt').setAttribute('aria-valuetext', fmtKm(h) + ' kilometres');
+  }
+
+  function oDraw(){
+    var c = octx, cx = 200, cy = 200, h = oHeight(), mi = MISSIONS[ob.m], i;
+    c.clearRect(0, 0, 400, 400);
+    c.fillStyle = '#090D1F'; c.fillRect(0, 0, 400, 400);
+    c.fillStyle = '#fff';
+    for (i = 0; i < stars.length; i++){ c.globalAlpha = stars[i].a; c.beginPath(); c.arc(stars[i].x, (stars[i].y * 1.25) % 400, stars[i].r, 0, 6.2832); c.fill(); }
+    c.globalAlpha = 1;
+    // target band
+    c.beginPath(); c.arc(cx, cy, oRing(mi.hi), 0, 6.2832); c.arc(cx, cy, oRing(mi.lo), 0, 6.2832, true);
+    c.fillStyle = 'rgba(110,231,213,.18)'; c.fill();
+    // orbit path
+    c.setLineDash([4, 6]); c.strokeStyle = '#A3AFD6'; c.lineWidth = 1.5;
+    c.beginPath(); c.arc(cx, cy, oRing(h), 0, 6.2832); c.stroke(); c.setLineDash([]);
+    // Earth
+    var eg = c.createRadialGradient(cx - 18, cy - 18, 8, cx, cy, 58);
+    eg.addColorStop(0, '#5B8CFF'); eg.addColorStop(1, '#1B3A94');
+    c.fillStyle = eg; c.beginPath(); c.arc(cx, cy, 58, 0, 6.2832); c.fill();
+    c.save(); c.translate(cx, cy); c.rotate(-ob.earth);
+    c.beginPath(); c.arc(0, 0, 58, 0, 6.2832); c.clip();
+    c.fillStyle = 'rgba(110,200,120,.85)';
+    c.beginPath(); c.ellipse(-14, -22, 20, 12, .4, 0, 6.2832); c.fill();
+    c.beginPath(); c.ellipse(22, 14, 16, 22, -.3, 0, 6.2832); c.fill();
+    c.beginPath(); c.ellipse(-30, 26, 10, 7, 0, 0, 6.2832); c.fill();
+    c.restore();
+    // ground station
+    var gx = cx + 58 * Math.cos(ob.earth), gy = cy - 58 * Math.sin(ob.earth);
+    c.fillStyle = '#FF8A4C'; c.beginPath(); c.arc(gx, gy, 5, 0, 6.2832); c.fill();
+    c.strokeStyle = '#0B1020'; c.lineWidth = 2; c.stroke();
+    // satellite
+    var r = oRing(h), sx = cx + r * Math.cos(ob.ang), sy = cy - r * Math.sin(ob.ang);
+    c.save(); c.translate(sx, sy); c.rotate(-ob.ang);
+    c.fillStyle = '#FF8A4C'; c.fillRect(-4, -15, 8, 11); c.fillRect(-4, 4, 8, 11);
+    c.fillStyle = '#EAF0FF'; c.fillRect(-6, -5, 12, 10);
+    c.restore();
+  }
+
+  function oLoop(t){
+    if (!ob.on) return;
+    var dt = Math.min(.05, (t - ob.last) / 1000); ob.last = t;
+    ob.ang += (2 * Math.PI / oPeriod(oHeight())) * dt * SPEEDUP;
+    ob.earth += (2 * Math.PI / EARTH_DAY) * dt * SPEEDUP;
+    oDraw();
+    ob.raf = requestAnimationFrame(oLoop);
+  }
+  function startOrbit(){
+    renderMissions(); resetOResult(); oTele(); oDraw();
+    ob.on = true; ob.last = performance.now();
+    ob.raf = requestAnimationFrame(oLoop);
+  }
+  function stopOrbit(){ ob.on = false; cancelAnimationFrame(ob.raf); }
+  $('#alt').addEventListener('input', function(){ oTele(); if (!ob.on) oDraw(); });
+
+  $('#oCheck').addEventListener('click', function(){
+    var h = oHeight(), mi = MISSIONS[ob.m], T = oPeriod(h), v = Math.sqrt(MU / (RE + h)), rb = $('#oResult');
+    rb.classList.remove('win', 'lose');
+    if (h >= mi.lo && h <= mi.hi){
+      var first = !progress.orbit[ob.m];
+      progress.orbit[ob.m] = true; save(); refreshHub(); renderMissions();
+      rb.classList.add('win');
+      $('#oTitle').textContent = 'Orbit achieved';
+      var txt = 'At ' + fmtKm(h) + ' km your satellite moves at ' + v.toFixed(1) + ' km/s and circles Earth every ' + fmtPeriod(T) + '. ';
+      if (ob.m === 2) txt += 'One lap takes about one Earth day, so it hovers over the same spot. ';
+      txt += first ? 'You earned 20 XP.' : 'You already completed this mission.';
+      if (orbitCount() === 3 && first) txt += ' All three orbits done: Orbit Master badge earned.';
+      $('#oText').textContent = txt;
+    } else {
+      rb.classList.add('lose');
+      $('#oTitle').textContent = 'Not in the target zone';
+      $('#oText').textContent = (h < mi.lo ? 'Too low. ' : 'Too high. ') + 'Your satellite would circle Earth every ' + fmtPeriod(T) + '. The target zone is ' + fmtKm(mi.lo) + ' to ' + fmtKm(mi.hi) + ' km.';
+    }
+  });
+
+  /* ---------- quiz ---------- */
+  var QUESTIONS = [
+    { q:'How strong is gravity on Mars compared with Earth?',
+      a:['About 38% as strong', 'About the same', 'Twice as strong', 'Almost zero'],
+      why:'Mars gravity is 3.71 m/s², about 38% of Earth’s 9.81 m/s². That is why your lander falls more slowly here.' },
+    { q:'How long is one day on Mars, called a sol?',
+      a:['About 24 hours 40 minutes', 'About 12 hours', 'About 36 hours', 'About 3 hours'],
+      why:'A sol is a little longer than an Earth day, about 24 hours and 40 minutes.' },
+    { q:'How long does a radio message take to travel between Earth and Mars?',
+      a:['Between about 3 and 22 minutes', 'Instantly', 'About 1 second', 'Several days'],
+      why:'It depends on how far apart the planets are. Because of the delay, rovers have to make many decisions on their own.' },
+    { q:'About how long does the International Space Station take to orbit Earth once?',
+      a:['About 90 minutes', 'About 24 hours', 'About 10 minutes', 'About one week'],
+      why:'The station travels so fast that it circles Earth about 16 times a day, so astronauts see many sunrises.' },
+    { q:'Which crater did NASA’s Perseverance rover land in?',
+      a:['Jezero Crater', 'Gale Crater', 'Tycho Crater', 'Shackleton Crater'],
+      why:'Jezero once held a lake and a river delta. Gale Crater is where the Curiosity rover works.' }
+  ];
+  var qs = { i:0, score:0, answered:false, order:[] };
+
+  function shuffle(arr){
+    var a = arr.slice(), i, j, t;
+    for (i = a.length - 1; i > 0; i--){ j = Math.floor(Math.random() * (i + 1)); t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function el(tag, cls, text){ var n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; }
+
+  function startQuiz(){ qs = { i:0, score:0, answered:false, order:[] }; renderQ(); }
+
+  function renderQ(){
+    var body = $('#quizBody'); body.textContent = '';
+    var item = QUESTIONS[qs.i];
+    qs.order = shuffle([0, 1, 2, 3]);
+    qs.answered = false;
+    var meta = el('div', 'qmeta');
+    meta.appendChild(el('span', '', 'Question ' + (qs.i + 1) + ' of ' + QUESTIONS.length));
+    meta.appendChild(el('span', '', 'Score ' + qs.score));
+    body.appendChild(meta);
+    body.appendChild(el('h3', '', item.q));
+    var opts = el('div', 'opts');
+    qs.order.forEach(function(idx){
+      var b = el('button', 'opt'); b.type = 'button';
+      b.appendChild(document.createTextNode(item.a[idx]));
+      b.addEventListener('click', function(){ answer(idx, b, opts); });
+      b.dataset.idx = String(idx);
+      opts.appendChild(b);
+    });
+    body.appendChild(opts);
+    var fb = el('div', 'fb'); fb.id = 'fb'; fb.hidden = true;
+    body.appendChild(fb);
+    var next = el('button', 'btn', qs.i === QUESTIONS.length - 1 ? 'See results' : 'Next question');
+    next.type = 'button'; next.id = 'nextQ'; next.hidden = true;
+    next.addEventListener('click', function(){
+      if (qs.i === QUESTIONS.length - 1) finishQuiz(); else { qs.i++; renderQ(); }
+    });
+    body.appendChild(next);
+  }
+
+  function answer(idx, btn, opts){
+    if (qs.answered) return;
+    qs.answered = true;
+    var item = QUESTIONS[qs.i], right = idx === 0;
+    if (right) qs.score++;
+    Array.prototype.forEach.call(opts.children, function(b){
+      b.disabled = true;
+      var bi = Number(b.dataset.idx);
+      if (bi === 0){ b.classList.add('right'); b.appendChild(el('span', 'mark', 'Correct answer')); }
+      else if (b === btn){ b.classList.add('wrong'); b.appendChild(el('span', 'mark', 'Not quite')); }
+    });
+    var fb = $('#fb'); fb.hidden = false;
+    fb.textContent = (right ? 'Correct! ' : 'Not quite. ') + item.why;
+    var next = $('#nextQ'); next.hidden = false; next.focus();
+  }
+
+  function finishQuiz(){
+    var improved = qs.score > progress.quizBest;
+    if (improved){ progress.quizBest = qs.score; save(); }
+    refreshHub();
+    var body = $('#quizBody'); body.textContent = '';
+    body.appendChild(el('p', 'eyebrow', 'Quiz complete'));
+    body.appendChild(el('div', 'score', qs.score + ' / ' + QUESTIONS.length));
+    var msg = qs.score >= 4 ? 'Excellent work, you earned the Mission Control badge.' : 'Good start. Score 4 or more to earn the Mission Control badge.';
+    body.appendChild(el('p', 'muted', msg + ' Your best is ' + progress.quizBest + ' / 5, worth ' + (progress.quizBest * 20) + ' XP.'));
+    var row = el('div', 'result-actions');
+    var again = el('button', 'btn', 'Try again'); again.type = 'button'; again.addEventListener('click', startQuiz);
+    var home = el('button', 'btn ghost', 'Back to stations'); home.type = 'button'; home.addEventListener('click', function(){ show('hub'); });
+    row.appendChild(again); row.appendChild(home);
+    body.appendChild(row);
+  }
+
+  /* ---------- NASA Image and Video Library ---------- */
+  var NASA = 'https://images-api.nasa.gov/search?media_type=image&page_size=12&q=';
+  var galleryToken = 0;
+  function loadGallery(q){
+    var token = ++galleryToken, box = $('#gallery'), msg = $('#galleryMsg');
+    box.textContent = ''; msg.textContent = 'Loading photos from NASA...';
+    fetch(NASA + encodeURIComponent(q))
+      .then(function(r){ if (!r.ok) throw new Error('bad status'); return r.json(); })
+      .then(function(d){
+        if (token !== galleryToken) return;
+        var all = (d.collection && d.collection.items) || [];
+        var items = all.filter(function(it){
+          return it.data && it.data[0] && it.links && it.links[0] && /^https:\/\//.test(it.links[0].href || '');
+        }).slice(0, 6);
+        if (!items.length){ msg.textContent = 'No photos found for this topic.'; return; }
+        msg.textContent = '';
+        items.forEach(function(it){
+          var info = it.data[0];
+          var fig = document.createElement('figure'); fig.className = 'photo';
+          var a = document.createElement('a');
+          a.href = 'https://images.nasa.gov/details/' + encodeURIComponent(info.nasa_id || '');
+          a.target = '_blank'; a.rel = 'noopener';
+          var img = document.createElement('img');
+          img.src = it.links[0].href; img.alt = info.title || 'NASA image'; img.loading = 'lazy';
+          a.appendChild(img); fig.appendChild(a);
+          var cap = document.createElement('figcaption'); cap.textContent = info.title || ''; fig.appendChild(cap);
+          box.appendChild(fig);
+        });
+      })
+      .catch(function(){
+        if (token !== galleryToken) return;
+        msg.textContent = 'Photos could not load. Check your internet connection and try another topic.';
+      });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.chips button'), function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.chips button'), function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+      loadGallery(b.getAttribute('data-q'));
+    });
+  });
+  loadGallery('Mars rover');
+
+  refreshHub();
+  st = newState();
+  draw(); telemetry();
+})();
+</script>
+
+</body>
+</html>
