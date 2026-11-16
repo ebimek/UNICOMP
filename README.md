@@ -13,15 +13,5 @@ Plain HTML, CSS and JavaScript. No install, no account, no build step.
 
 Extra training stations (Mars landing, orbit builder, quiz) and live NASA photos are on the home screen.
 
-## Run it
-Open `index.html` in a browser. Live NASA data needs an internet connection; otherwise the game clearly labels the archived examples it uses instead.
-
-## Publish on GitHub Pages
-1. Create a public repository and upload `index.html`, `README.md` and `DATASETS.md`.
-2. Settings > Pages > Source: "Deploy from a branch", branch `main`, folder `/ (root)`, Save.
-3. Your game is live after about a minute at `https://<your-username>.github.io/<repository-name>/`.
-4. Optional: request a Web Filter Classification (FortiGuard form linked in the Space Apps submission guide) so judges can open the site.
-
 ## NASA data
 See `DATASETS.md` for the datasets used, how, and why.
-Get your own free NASA API key at https://api.nasa.gov and replace `NASA_API_KEY` in `index.html`.
