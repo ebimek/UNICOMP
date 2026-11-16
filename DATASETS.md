@@ -10,7 +10,6 @@ This note explains which NASA datasets the game uses, how, and why. It is also s
 - How it affects gameplay: the 12 weeks of the mission replay the real flares from those 12 weeks. A week with an M5 or larger flare becomes a solar storm event. A bigger flare class gives a bigger radiation event (game scaling: M5 to M9 = small, X1 to X4.9 = large, X5 and above = extreme). Players decide whether to go to the storm shelter, which costs power and crew time.
 - Why: it ties the shielding trade-off to real, current space weather, so every playthrough is different.
 - Live or archived: when the page can reach NASA, the game says "live data from NASA DONKI" and shows the dates it replays. If NASA cannot be reached, or the Sun was quiet, the game says so and uses archived examples of well-known flares (7 Mar 2012 X5.4, 6 Sep 2017 X9.3, 11 May 2024 X5.8). Archived data is never presented as live.
-- API key: the page uses the shared `DEMO_KEY`. Replace `NASA_API_KEY` near the top of the outpost script with a free key from https://api.nasa.gov for higher rate limits.
 
 ### RadLab (OSDR Radiation Dosimetry Database)
 - Source: https://visualization.osdr.nasa.gov/radlab/gui/data-api/
@@ -35,4 +34,3 @@ To fit a mission into 12 short turns, these are invented for gameplay and are no
 ## Other resources
 - Fonts: Inter and Space Grotesk, from Google Fonts (SIL Open Font License).
 - No code libraries or frameworks. The game is plain HTML, CSS and JavaScript.
-- No NASA logos or branding are used. This project is not endorsed by NASA.
